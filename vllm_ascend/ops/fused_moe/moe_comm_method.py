@@ -45,6 +45,10 @@ from vllm_ascend.ops.fused_moe.token_dispatcher import (
 )
 from vllm_ascend.quantization.quant_type import QuantType
 
+from vllm_ascend.distributed.parallel_state import get_mc2_group
+import vllm_ascend.envs as envs_ascend
+from npu_ops_transformer.ops import get_symm_buffer_for_mega_moe, mega_moe
+
 _MoECommMethods: dict[MoECommType | None, MoECommMethod] = {}
 
 
