@@ -20,6 +20,7 @@ from vllm_ascend.utils import (
     has_layer_idx,
     is_drafter_moe_model,
     is_moe_model,
+    speculative_enable_dispatch_gmm_combine_decode,
 )
 
 
@@ -244,12 +245,10 @@ def set_mc2_tokens_capacity(vllm_config, max_num_reqs, uniform_decode_query_len)
     tp_size = vllm_config.parallel_config.tensor_parallel_size
     # FIX(mega all-route): raise routing capacity so prefill also selects FUSED_MC2 (mega),
     # capped at 512 (MegaMoe BS<=512). Serve sets max_num_batched_tokens<=512.
-    try:
-        from vllm_ascend.ascend_config import get_ascend_config as _gac
-        if _gac().enable_fused_mc2 == 2:
-            max_num_tokens = min(max(max_num_tokens, int(vllm_config.scheduler_config.max_num_batched_tokens)), 512)
-    except Exception:
-        pass
+
+    if get_ascend_config().enable_fused_mc2 == 3:
+        max_num_tokens = min(max(max_num_tokens, int(vllm_config.scheduler_config.max_num_batched_tokens)), 512)
+
     # Use integer arithmetic for ceiling division.
     num_tokens_per_tp_rank = (max_num_tokens + tp_size - 1) // tp_size
     _mc2_tokens_capacity = num_tokens_per_tp_rank * tp_size
@@ -338,7 +337,7 @@ def select_moe_comm_method(
         num_experts_per_device = num_experts // ep_world_size
 
         fused_mc2_eligible = (
-            fused_mc2_enable == 2 and fused_decode_guard and _cann_megamoe_supported_by_config(vllm_config, quant_type)
+            fused_mc2_enable == 3 and fused_decode_guard and _cann_megamoe_supported_by_config(vllm_config, quant_type)
         )
         # FIX(mega all-route): do NOT disable MegaMoe during profile_run. Weights are ND int8
         # only (no standard NZ-int32 path), so profiling must also exercise MegaMoe. Shapes match
@@ -357,7 +356,7 @@ def select_moe_comm_method(
         fused_mc2_enable = get_ascend_config().enable_fused_mc2
         fused_decode_guard = get_ep_group().world_size <= 32 and (not is_draft_model)
         fused_mega_moe_supported = (
-            fused_mc2_enable == 2
+            fused_mc2_enable == 3
             and fused_decode_guard
             and _cann_megamoe_supported_by_config(vllm_config, quant_type)
         )
@@ -367,6 +366,12 @@ def select_moe_comm_method(
             if fused_mc2_enable == 1:
                 fused_small_batch_enable = fused_decode_guard
             elif fused_mc2_enable == 2:
+                fused_decode_enable = (
+                    fused_mc2_enable
+                    and speculative_enable_dispatch_gmm_combine_decode(vllm_config)
+                    and quant_type == "w8a8_dynamic"
+                )
+            elif fused_mc2_enable == 3:
                 fused_small_batch_enable = fused_mega_moe_supported
             else:
                 fused_small_batch_enable = False

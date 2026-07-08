@@ -757,7 +757,7 @@ class AscendW4A8DynamicFusedMoEMethod(AscendMoEScheme):
         corresponding bias parameter exists (it does for W4A8; W8A8 dynamic
         has no scale_bias on this method's layers).
         """
-        if get_ascend_config().enable_fused_mc2 != 2 or self.dynamic_eplb:
+        if get_ascend_config().enable_fused_mc2 != 3 or self.dynamic_eplb:
             return
         if mega_w13 is None:
             mega_w13 = layer.w13_weight.data
@@ -825,7 +825,7 @@ class AscendW4A8DynamicFusedMoEMethod(AscendMoEScheme):
         if self.is_per_channel_weight:
             layer.w13_weight_scale.data = self.maybe_squeeze_per_channel_weight_scale(layer.w13_weight_scale.data)
         # FIX(mega W4A8 ND all-route): keep weights as ND int8 when MegaMoe is on (skip trans_nz).
-        _mega_nd = get_ascend_config().enable_fused_mc2 == 2 and not self.dynamic_eplb
+        _mega_nd = get_ascend_config().enable_fused_mc2 == 3 and not self.dynamic_eplb
         if not _mega_nd:
             layer.w13_weight.data = maybe_trans_nz(layer.w13_weight.data)
             layer.w2_weight.data = maybe_trans_nz(layer.w2_weight.data)

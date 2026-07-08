@@ -134,7 +134,7 @@ class TokenDispatcherWithMC2(MoETokenDispatcher[MoEMC2CombineMetadata]):
         # FIX(mega all-route): route prefill+decode through MegaMoe (enable_fused_mc2==2). MegaMoe
         # is capped at BS<=512, so bound the per-rank token capacity here; the serve config must
         # set --max-num-batched-tokens<=512 so no forward exceeds it.
-        if get_ascend_config().enable_fused_mc2 == 2:
+        if get_ascend_config().enable_fused_mc2 == 3:
             max_num_tokens = min(max(max_num_tokens, int(scheduler_config.max_num_batched_tokens)), 512)
         num_tokens_per_tp_rank = (max_num_tokens + tp_size - 1) // tp_size
         # Surface the per-rank capacity for CANN MegaMoe's get_symm_buffer
