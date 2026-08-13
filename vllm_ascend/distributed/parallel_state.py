@@ -6,6 +6,7 @@ from vllm_ascend.ascend_config import get_ascend_config
 
 # Currently, mc2 op need their own group coordinator.
 _MC2: GroupCoordinator | None = None
+_MC2_DRAFT: GroupCoordinator | None = None
 
 # Module specific tensor parallel groups
 _MLP_TP: GroupCoordinator | None = None
@@ -86,6 +87,9 @@ def init_ascend_model_parallel(
     global _MC2
     _MC2 = init_model_parallel_group(group_ranks, get_world_group().local_rank, backend, group_name="mc2")
 
+    global _MC2_DRAFT
+    _MC2_DRAFT = init_model_parallel_group(group_ranks, get_world_group().local_rank, backend, group_name="mc2_draft")
+
     if get_ascend_config().eplb_config.dynamic_eplb:
         global _DYNAMIC_EPLB
         _DYNAMIC_EPLB = init_model_parallel_group(
@@ -135,12 +139,17 @@ def init_ascend_model_parallel(
 
 
 def model_parallel_initialized():
-    return _MC2 is not None
+    return _MC2 is not None and _MC2_DRAFT is not None
 
 
 def get_mc2_group() -> GroupCoordinator:
     assert _MC2 is not None, "mc2 group is not initialized"
     return _MC2
+
+
+def get_mc2_draft_group() -> GroupCoordinator:
+    assert _MC2_DRAFT is not None, "mc2 draft group is not initialized"
+    return _MC2_DRAFT
 
 
 def get_mlp_tp_group() -> GroupCoordinator:
@@ -178,6 +187,11 @@ def destroy_ascend_model_parallel():
     if _MC2:
         _MC2.destroy()
     _MC2 = None
+
+    global _MC2_DRAFT
+    if _MC2_DRAFT:
+        _MC2_DRAFT.destroy()
+    _MC2_DRAFT = None
 
     global _MLP_TP
     if _MLP_TP:

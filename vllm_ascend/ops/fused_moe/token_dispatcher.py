@@ -31,7 +31,7 @@ from vllm.distributed.parallel_state import get_ep_group
 from vllm_ascend.ascend_config import get_ascend_config
 from vllm_ascend.ascend_forward_context import get_mc2_tokens_capacity
 from vllm_ascend.device.device_op import DeviceOperator
-from vllm_ascend.distributed.parallel_state import get_mc2_group
+from vllm_ascend.distributed.parallel_state import get_mc2_group, get_mc2_draft_group
 from vllm_ascend.lora.fused_moe import (
     all2all_lora_indices,
     has_lora,
@@ -118,6 +118,10 @@ class TokenDispatcherWithMC2(MoETokenDispatcher[MoEMC2CombineMetadata]):
         local_rank = torch.distributed.get_rank(group=device_group)
         backend = device_group._get_backend(torch.device("npu"))
         self.moe_all_to_all_group_name = backend.get_hccl_comm_name(local_rank)
+        device_group_2 = get_mc2_draft_group().device_group
+        local_rank_2 = torch.distributed.get_rank(group=device_group_2)
+        backend = device_group_2._get_backend(torch.device("npu"))
+        self.moe_all_to_all_group_name_2 = backend.get_hccl_comm_name(local_rank_2)
         self.ep_rank_id = get_mc2_group().rank_in_group
         self.ep_world_size = get_mc2_group().world_size
         self.enable_dispatch_v2 = hasattr(torch_npu, "npu_moe_distribute_dispatch_v2")
@@ -162,6 +166,10 @@ class TokenDispatcherWithMC2(MoETokenDispatcher[MoEMC2CombineMetadata]):
         local_rank = torch.distributed.get_rank(group=device_group)
         backend = device_group._get_backend(torch.device("npu"))
         self.moe_all_to_all_group_name = backend.get_hccl_comm_name(local_rank)
+        device_group_2 = get_mc2_draft_group().device_group
+        local_rank_2 = torch.distributed.get_rank(group=device_group_2)
+        backend = device_group_2._get_backend(torch.device("npu"))
+        self.moe_all_to_all_group_name_2 = backend.get_hccl_comm_name(local_rank_2)
 
     def get_dispatch_mc2_kwargs(
         self,

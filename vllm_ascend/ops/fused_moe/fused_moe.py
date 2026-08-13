@@ -24,7 +24,7 @@ from vllm.model_executor.layers.fused_moe.layer import (
 )
 
 from vllm_ascend.ascend_forward_context import _EXTRA_CTX, MoECommType
-from vllm_ascend.distributed.parallel_state import get_mc2_group
+from vllm_ascend.distributed.parallel_state import get_mc2_group, get_mc2_draft_group
 from vllm_ascend.ops.fused_moe.moe_comm_method import setup_moe_comm_method
 from vllm_ascend.ops.fused_moe.routed_experts import AscendRoutedExperts
 from vllm_ascend.ops.fused_moe.shared_experts import AscendSharedExperts
@@ -70,6 +70,7 @@ class AscendMoERunner(MoERunner):  # type: ignore[no-redef]
         if self.moe_config.ep_size > 1:
             self.moe_config.ep_group = get_ep_group()
             self.moe_config.mc2_group = get_mc2_group()
+            self.moe_config.mc2_draft_group = get_mc2_draft_group()
 
         self.ascend_shared_experts = None
         if shared_experts is not None:
