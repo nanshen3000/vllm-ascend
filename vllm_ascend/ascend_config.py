@@ -896,7 +896,7 @@ class AscendConfig:
         if hidden_size is None:
             return False
         hidden_size = int(hidden_size)
-        if hidden_size < 1024 or hidden_size > 8192 or hidden_size % 512 != 0:
+        if hidden_size < 1024 or hidden_size > 8192:
             return False
 
         moe_intermediate_size = getattr(hf_text_config, "moe_intermediate_size", None)
